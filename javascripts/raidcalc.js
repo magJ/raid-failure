@@ -2,14 +2,13 @@ $('#failchanceform').change(processRaidForm);
 processRaidForm();
 
 function processRaidForm(){
-	var type  = $('#raidtype option:selected').text();
-	var size  = $('#drivesize option:selected').val();
-	var count = $('#drivecount option:selected').text();
-	var ure   = $('#ureaverage option:selected').val();
-	var chance = calculateRaidFailureChance(type, count, size, ure);
+    var type  = $('#raidtype option:selected').text();
+    var size  = $('#drivesize option:selected').val();
+    var count = $('#drivecount option:selected').text();
+    var ure   = parseFloat($('#ureaverage option:selected').val());
+    var chance = calculateRaidFailureChance(type, count, size, ure);
 
-
-	$("#resultspan").text(chance.toFixed(2).substring(2) + "%");
+    $("#resultspan").text(Math.round(chance * 100) + "%");
 }
 
 function calculateRaidFailureChance(type, diskCount, disksizeGB, ure){
