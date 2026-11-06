@@ -3,10 +3,12 @@
  * Assumes independent, constant per-bit URE probability.
  * One member disk has already failed.
  */
-$('#failchanceform').on('change', processRaidForm);
-$('#raidtype').on('change', updateStripeUnitVisibility);
-updateStripeUnitVisibility();
-processRaidForm();
+if (typeof window !== 'undefined' && window.jQuery) {
+    $('#failchanceform').on('change', processRaidForm);
+    $('#raidtype').on('change', updateStripeUnitVisibility);
+    updateStripeUnitVisibility();
+    processRaidForm();
+}
 
 function processRaidForm() {
     var type = $('#raidtype').val();
