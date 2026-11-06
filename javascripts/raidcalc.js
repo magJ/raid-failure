@@ -175,6 +175,7 @@ if (typeof module !== 'undefined' && module.exports) {
         calculateRaid6FailureChance,
         probabilityOfNoUre,
         probabilityOfAtLeastOneUre,
-        raid6StripeSuccessChance
+        raid6StripeSuccessChance,
+        raid6StripeFailureChance
     };
 }

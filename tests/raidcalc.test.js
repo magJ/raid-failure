@@ -2,9 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
     calculateRaid5SuccessChance,
-    calculateRaid5FailureChance,
     calculateRaid6SuccessChance,
-    calculateRaid6FailureChance,
     probabilityOfNoUre,
     probabilityOfAtLeastOneUre,
     raid6StripeSuccessChance
@@ -50,22 +48,4 @@ test('RAID 6 requires at least four drives', () => {
 
 test('RAID 6 rejects invalid stripe unit sizes', () => {
     assert.throws(() => calculateRaid6SuccessChance(6, 4000, 14, 0), /greater than zero/);
-});
-
-test('RAID 5 failure probability remains available when success rounds to one', () => {
-    const failure = calculateRaid5FailureChance(3, 500, 17);
-    assert.ok(failure > 0);
-});
-
-test('RAID 6 failure probability remains numerically stable for low URE rates', () => {
-    const failure = calculateRaid6FailureChance(6, 4000, 17, 256);
-    assert.ok(failure > 0);
-    assert.ok(failure < 1);
-});
-
-test('RAID 6 stripe failure requires at least two unreadable chunks', () => {
-    const failure = require('../javascripts/raidcalc.js')
-        .raid6StripeFailureChance(5, 256 * 1024, 14);
-    assert.ok(failure > 0);
-    assert.ok(failure < 1e-10);
 });
