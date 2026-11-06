@@ -27,10 +27,13 @@ function processRaidForm() {
     }
 
     var success;
+    var failure;
     if (type === 'RAID 5') {
         success = calculateRaid5SuccessChance(count, size, ure);
+        failure = calculateRaid5FailureChance(count, size, ure);
     } else if (type === 'RAID 6') {
         success = calculateRaid6SuccessChance(count, size, ure, stripeUnitKB);
+        failure = calculateRaid6FailureChance(count, size, ure, stripeUnitKB);
     } else {
         showValidationError('Unsupported RAID level.');
         return;
@@ -39,7 +42,7 @@ function processRaidForm() {
     $('#resultspan').text(formatPercent(success * 100));
     $('#resultdetails').text(
         'Modeled probability of an unrecoverable rebuild: ' +
-        formatPercent((1 - success) * 100) +
+        formatPercent(failure * 100) +
         '. This is not the probability of every kind of array or data loss.'
     );
 }
@@ -59,6 +62,12 @@ function calculateRaid5SuccessChance(diskCount, diskSizeGB, ureExponent) {
     return probabilityOfNoUre(bitsToRead, ureExponent);
 }
 
+function calculateRaid5FailureChance(diskCount, diskSizeGB, ureExponent) {
+    validateCommonInputs(diskCount, diskSizeGB, ureExponent);
+    var bitsToRead = (diskCount - 1) * diskSizeGB * 1000000000 * 8;
+    return probabilityOfAtLeastOneUre(bitsToRead, ureExponent);
+}
+
 function calculateRaid6SuccessChance(diskCount, diskSizeGB, ureExponent, stripeUnitKB) {
     validateCommonInputs(diskCount, diskSizeGB, ureExponent);
     if (!Number.isInteger(diskCount) || diskCount < 4) {
@@ -74,26 +83,60 @@ function calculateRaid6SuccessChance(diskCount, diskSizeGB, ureExponent, stripeU
     var fullStripeCount = Math.floor(diskBytes / chunkBytes);
     var remainderBytes = diskBytes - fullStripeCount * chunkBytes;
 
-    var fullStripeSuccess = raid6StripeSuccessChance(
+    return Math.exp(calculateRaid6LogSuccess(
+        survivingDisks, diskBytes, chunkBytes, ureExponent
+    ));
+}
+
+function calculateRaid6FailureChance(diskCount, diskSizeGB, ureExponent, stripeUnitKB) {
+    validateCommonInputs(diskCount, diskSizeGB, ureExponent);
+    if (!Number.isInteger(diskCount) || diskCount < 4) {
+        throw new RangeError('RAID 6 requires at least 4 drives.');
+    }
+    if (!Number.isFinite(stripeUnitKB) || stripeUnitKB <= 0) {
+        throw new RangeError('Stripe unit size must be greater than zero.');
+    }
+    var survivingDisks = diskCount - 1;
+    var diskBytes = diskSizeGB * 1000000000;
+    var chunkBytes = stripeUnitKB * 1024;
+    var logSuccess = calculateRaid6LogSuccess(
+        survivingDisks, diskBytes, chunkBytes, ureExponent
+    );
+    return -Math.expm1(logSuccess);
+}
+
+function calculateRaid6LogSuccess(survivingDisks, diskBytes, chunkBytes, ureExponent) {
+    var fullStripeCount = Math.floor(diskBytes / chunkBytes);
+    var remainderBytes = diskBytes - fullStripeCount * chunkBytes;
+    var fullStripeFailure = raid6StripeFailureChance(
         survivingDisks, chunkBytes, ureExponent
     );
-    var logSuccess = fullStripeCount * Math.log(fullStripeSuccess);
-
+    var logSuccess = fullStripeCount * Math.log1p(-fullStripeFailure);
     if (remainderBytes > 0) {
-        var lastStripeSuccess = raid6StripeSuccessChance(
+        var lastStripeFailure = raid6StripeFailureChance(
             survivingDisks, remainderBytes, ureExponent
         );
-        logSuccess += Math.log(lastStripeSuccess);
+        logSuccess += Math.log1p(-lastStripeFailure);
     }
-    return Math.exp(logSuccess);
+    return logSuccess;
+}
+
+function raid6StripeFailureChance(survivingDisks, chunkBytes, ureExponent) {
+    var q = probabilityOfAtLeastOneUre(chunkBytes * 8, ureExponent);
+    if (q === 0 || survivingDisks < 2) return 0;
+    if (q === 1) return 1;
+
+    var probability = Math.exp(survivingDisks * Math.log1p(-q));
+    var failure = 0;
+    for (var errors = 1; errors <= survivingDisks; errors++) {
+        probability *= ((survivingDisks - errors + 1) / errors) * q / (1 - q);
+        if (errors >= 2) failure += probability;
+    }
+    return failure;
 }
 
 function raid6StripeSuccessChance(survivingDisks, chunkBytes, ureExponent) {
-    var chunkUreChance = probabilityOfAtLeastOneUre(chunkBytes * 8, ureExponent);
-    var noUre = Math.pow(1 - chunkUreChance, survivingDisks);
-    var exactlyOneUre = survivingDisks * chunkUreChance *
-        Math.pow(1 - chunkUreChance, survivingDisks - 1);
-    return noUre + exactlyOneUre;
+    return 1 - raid6StripeFailureChance(survivingDisks, chunkBytes, ureExponent);
 }
 
 function probabilityOfNoUre(bitCount, ureExponent) {
@@ -127,7 +170,9 @@ function formatPercent(value) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         calculateRaid5SuccessChance,
+        calculateRaid5FailureChance,
         calculateRaid6SuccessChance,
+        calculateRaid6FailureChance,
         probabilityOfNoUre,
         probabilityOfAtLeastOneUre,
         raid6StripeSuccessChance
