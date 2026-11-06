@@ -1,0 +1,7 @@
+{
+  "name": "raid-failure",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  }
+}
