@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="">
+    <meta name="description" content="Estimate RAID 5 and RAID 6 rebuild success under a simplified URE model.">
     <meta name="author" content="">
 
-    <title>RAID rebuild failure chance calculator.</title>
+    <title>RAID rebuild reliability calculator</title>
 
     <!-- Bootstrap core CSS -->
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
@@ -30,16 +30,16 @@
         <div class="cover-container">
 
           <div class="inner cover">
-            <h1 class="cover-heading">RAID rebuild failure chance calculator.</h1>
-            <p>This calculator determines the chance of a RAID rebuild failing due to an unrecoverable read error. The calculator makes a <a style="font-weight: bold" href="http://www.raidtips.com/raid5-ure.aspx">number of assumptions.</a></p>
-            <p>Other types of drive errors and failures are not considered as part of this calculator.</p>
+            <h1 class="cover-heading">RAID rebuild reliability calculator.</h1>
+            <p>Estimate the probability of a successful RAID 5 or RAID 6 rebuild under a simplified independent URE model. <a style="font-weight: bold" href="https://github.com/alvolalex/raid-failure/blob/main/docs/mathematical-model.md">Read the model assumptions.</a></p>
+            <p>Additional drive failures, correlated errors, controller-specific recovery behavior, and other causes of data loss are not modeled.</p>
             <form id="failchanceform" class="form-horizontal" role="form">
   <div class="form-group">
     <label for="raidtype" class="col-sm-3 control-label">Type</label>
     <div class="col-sm-9">
       <select id="raidtype" class="form-control">
-        <option>RAID 5</option>
-        <option>RAID 6</option>
+        <option value="RAID 5">RAID 5</option>
+        <option value="RAID 6">RAID 6</option>
       </select>
     </div>
   </div>
@@ -103,21 +103,35 @@
     <label for="ureaverage" class="col-sm-3 control-label">Unrecoverable read error rate</label>
     <div class="col-sm-9">
       <select id="ureaverage" class="form-control">
-        <option value="9">10 ^ 9</option>
-        <option value="10">10 ^ 10</option>
-        <option value="11">10 ^ 11</option>
-        <option value="12">10 ^ 12</option>
-        <option value="13">10 ^ 13</option>
-        <option value="14" selected>10 ^ 14</option>
-        <option value="15">10 ^ 15</option>
-        <option value="16">10 ^ 16</option>
-        <option value="17">10 ^ 17</option>
+        <option value="9">10 ^ -9</option>
+        <option value="10">10 ^ -10</option>
+        <option value="11">10 ^ -11</option>
+        <option value="12">10 ^ -12</option>
+        <option value="13">10 ^ -13</option>
+        <option value="14" selected>10 ^ -14</option>
+        <option value="15">10 ^ -15</option>
+        <option value="16">10 ^ -16</option>
+        <option value="17">10 ^ -17</option>
       </select>
     </div>
   </div>
+  <div id="stripeunitgroup" class="form-group" style="display: none;">
+    <label for="stripeunit" class="col-sm-3 control-label">Stripe unit</label>
+    <div class="col-sm-9">
+      <select id="stripeunit" class="form-control">
+        <option value="64">64 KiB</option>
+        <option value="128">128 KiB</option>
+        <option value="256" selected>256 KiB</option>
+        <option value="512">512 KiB</option>
+        <option value="1024">1 MiB</option>
+      </select>
+      <p class="help-block">Data chunk size per disk, not the full stripe width. Select the value configured by your RAID implementation.</p>
+    </div>
+  </div>
 </form>
-          <p class="lead">Errorless rebuild success chance:</p>
-          <p id="resultspan"></p>
+          <p class="lead">Modeled rebuild success probability:</p>
+          <p id="resultspan" aria-live="polite"></p>
+          <p id="resultdetails" aria-live="polite"></p>
           </div>
 
           <div class="mastfoot">
